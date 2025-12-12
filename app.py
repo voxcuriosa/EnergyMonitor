@@ -19,16 +19,24 @@ st.sidebar.markdown(f"**v{current_version}**")
 
 st.title("⚡ Strømforbruk (Homey Pro)")
 
-# --- Authentication ---
-authenticator = GoogleAuth()
-# Sjekk auth og stopp hvis ikke logget inn
-user_info = authenticator.check_auth(allowed_emails=["borchgrevink@gmail.com"])
+# --- AUTHENTICATION ---
+# Vi henter innlogging fra auth.py. Denne funksjonen stopper appen hvis man ikke er logget inn.
+user_info = auth.authenticate_user()
 
-# Vis brukerinfo i sidebar
-st.sidebar.divider()
-st.sidebar.write(f"👤 {user_info.get('name', 'Bruker')}")
+# Sjekk om e-posten har tilgang
+ALLOWED_USERS = ["borchgrevink@gmail.com"]
+
+if user_info["email"] not in ALLOWED_USERS:
+    st.error(f"Beklager, brukeren {user_info['email']} har ikke tilgang.")
+    if st.button("Logg ut"):
+        del st.session_state["user_info"]
+        st.rerun()
+    st.stop()
+
+# Hvis vi kom hit, er brukeren godkjent!
+st.sidebar.success(f"Logget inn som: {user_info['name']}")
 if st.sidebar.button("Logg ut"):
-    st.session_state.clear()
+    del st.session_state["user_info"]
     st.rerun()
 
 # --- Main App Logic ---

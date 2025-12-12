@@ -1,120 +1,165 @@
 import streamlit as st
-import os
 import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
+import os
 
-class GoogleAuth:
-    def __init__(self):
-        # Hent secrets
-        try:
-            self.client_config = st.secrets["google"]
-        except KeyError:
-            st.error("Mangler Google Auth konfigurasjon i secrets.toml (se etter [google])")
+# CONSTANTS
+# Scopes defines what we want to access. 
+# "openid" is required for authentication.
+# "userinfo.email" lets us check who you are.
+SCOPES = [
+    "openid",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile"
+]
+
+def get_google_auth_config():
+    """
+    Henter secrets og forbereder dem for Google-biblioteket.
+    """
+    try:
+        # Hent rad fra secrets
+        client_config = st.secrets["google"]
+        
+        # Konverter til standard dictionary for å unngå immutability-problemer
+        config = dict(client_config)
+        
+        # Sjekk at vi har de viktigste feltene
+        required_keys = ["client_id", "client_secret", "redirect_uri"]
+        missing = [key for key in required_keys if key not in config]
+        
+        if missing:
+            st.error(f"Mangler følgende nøkler i [.streamlit/secrets.toml] under [google]: {missing}")
             st.stop()
-            
-        self.scopes = [
-            "openid",
-            "https://www.googleapis.com/auth/userinfo.email", 
-            "https://www.googleapis.com/auth/userinfo.profile"
-        ]
 
-    def get_flow(self):
-        """Oppretter en auth flow instance."""
-        # For å tillate http lokalt (viktig for testing)
-        if "localhost" in st.query_params: # En enkel sjekk, men os env er bedre
-             os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
-        
-        # Bestem redirect URI basert på hvor vi kjører
-        # Dette er litt "hacky" i Streamlit, men fungerer ofte
-        # Alternativt må brukeren hardkode redirect_uri i secrets
-        
-        redirect_uri = self.client_config.get("redirect_uri")
-        if not redirect_uri:
-            # Fallback guessing if not specified
-            redirect_uri = "http://localhost:8501" 
-        
-        # Prepare config struct for Google Auth Library
-        # The library expects {"web": { ... }} structure
-        # Must convert to dict() because st.secrets is immutable
-        client_config = dict(self.client_config)
-        config_dict = {"web": client_config}
-        
-        # Ensure auth_uri and token_uri are present (often not in minimal secrets)
-        if "auth_uri" not in config_dict["web"]:
-            config_dict["web"]["auth_uri"] = "https://accounts.google.com/o/oauth2/auth"
-        if "token_uri" not in config_dict["web"]:
-            config_dict["web"]["token_uri"] = "https://oauth2.googleapis.com/token"
+        # Google biblioteket krever at 'auth_uri' og 'token_uri' finnes. 
+        # Vi legger dem til manuelt hvis de mangler.
+        if "auth_uri" not in config:
+            config["auth_uri"] = "https://accounts.google.com/o/oauth2/auth"
+        if "token_uri" not in config:
+            config["token_uri"] = "https://oauth2.googleapis.com/token"
 
+        # Biblioteket forventer strukturen {"web": { ... }}
+        return {"web": config}
+
+    except Exception as e:
+        st.error(f"Kunne ikke laste Google-konfigurasjon: {e}")
+        st.stop()
+
+
+def authenticate_user():
+    """
+    Hovedfunksjon for å håndtere innlogging.
+    Returnerer brukerinfo (dict) hvis innlogget, ellers None (og stopper scriptet).
+    """
+    
+    # 1. SJEKK OM VI ALLEREDE ER INNLOGGET I SESSION STATE
+    if "user_info" in st.session_state:
+        return st.session_state["user_info"]
+
+    # Hent konfigurasjon
+    client_config = get_google_auth_config()
+    redirect_uri = client_config["web"]["redirect_uri"]
+
+    # 2. LAG FLOW-OBJEKTET
+    # Dette objektet styrer hele dansen med Google.
+    try:
         flow = google_auth_oauthlib.flow.Flow.from_client_config(
-            config_dict,
-            scopes=self.scopes,
-            redirect_uri=redirect_uri 
+            client_config,
+            scopes=SCOPES,
+            redirect_uri=redirect_uri
         )
-        return flow
+    except Exception as e:
+        st.error(f"Feil ved oppsett av Google Auth Flow: {e}")
+        st.stop()
 
-    def check_auth(self, allowed_emails=None):
-        """Sjekker om bruker er logget inn, og håndterer login flow."""
-        
-        # 1. Er bruker allerede logget inn i session?
-        if "google_auth_user" in st.session_state:
-            user = st.session_state["google_auth_user"]
-            if allowed_emails and user["email"] not in allowed_emails:
-                st.error(f"Beklager, e-posten {user['email']} har ikke tilgang til denne appen.")
-                if st.button("Logg ut"):
-                    st.session_state.pop("google_auth_user")
-                    st.rerun()
-                st.stop()
-            return user
+    # 3. SJEKK OM VI KOMMER TILBAKE FRA GOOGLE MED EN CODE
+    # Når Google sender brukeren tilbake, legger de til ?code=... i URL-en
+    if "code" in st.query_params:
+        try:
+            code = st.query_params["code"]
+            
+            # Bytt koden mot tokens
+            flow.fetch_token(code=code)
+            credentials = flow.credentials
 
-        # 2. Kommer bruker tilbake fra Google Auth (har code i URL)?
-        if "code" in st.query_params:
-            try:
-                code = st.query_params["code"]
-                flow = self.get_flow()
-                flow.fetch_token(code=code)
-                credentials = flow.credentials
-                
-                # Hent brukerinfo
-                # Hent brukerinfo via People API (siden OAuth2 API er vanskelig å finne/enable)
-                service = build('people', 'v1', credentials=credentials)
-                person = service.people().get(
-                    resourceName='people/me', 
-                    personFields='names,emailAddresses'
-                ).execute()
-                
-                # Parse People API response til vårt format
-                email = person.get('emailAddresses', [])[0]['value']
-                name = person.get('names', [])[0]['displayName']
-                
-                user_info = {"email": email, "name": name}
-                
-                st.session_state["google_auth_user"] = user_info
-                
-                # Rens URL
-                st.query_params.clear() 
+            # VERIFISERING: Hent info om hvem dette er
+            # Vi bruker 'people' API da dette er mer robust enn oauth2 v2
+            service = build('people', 'v1', credentials=credentials)
+            person = service.people().get(
+                resourceName='people/me', 
+                personFields='names,emailAddresses'
+            ).execute()
+
+            # Hent ut e-post og navn
+            email = person.get('emailAddresses', [])[0]['value']
+            name = person.get('names', [])[0].get('displayName', 'Ukjent')
+
+            # Lagre i session state
+            user_data = {"email": email, "name": name}
+            st.session_state["user_info"] = user_data
+
+            # Rydd opp URL-en (fjern ?code=...) slik at ved refresh så logger vi ikke inn på nytt
+            st.query_params.clear()
+            st.rerun()
+
+        except Exception as e:
+            st.error(f"Noe gikk galt under innloggingen: {e}")
+            st.markdown("Trykk på knappen under for å prøve på nytt.")
+            if st.button("Prøv igjen"):
+                st.query_params.clear()
                 st.rerun()
-                
-            except Exception as e:
-                st.error(f"Feil under innlogging: {e}")
-                st.write("Prøv å laste siden på nytt.")
-                st.stop()
-                
-        # 3. Ikke logget inn - vis Login knapp
-        flow = self.get_flow()
-        auth_url, _ = flow.authorization_url(prompt='consent')
-        
+            st.stop()
+
+    # 4. HVIS IKKE INNLOGGET: VIS LOGIN-KNAPP
+    else:
+        # Generer login-URL
+        auth_url, _ = flow.authorization_url(
+            prompt='consent',
+            access_type='offline',
+            include_granted_scopes='true'
+        )
+
         st.markdown(f"""
-            <div style="display: flex; justify-content: center; margin-top: 50px;">
-                <a href="{auth_url}" target="_self" style="
-                    background-color: #4285F4; 
-                    color: white; 
-                    padding: 12px 24px; 
-                    text-decoration: none; 
-                    border-radius: 4px; 
-                    font-family: sans-serif; 
-                    font-weight: bold;">
-                    Logg inn med Google
+            <style>
+            .login-btn {{
+                background-color: #4285F4;
+                color: white;
+                padding: 15px 32px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                margin: 4px 2px;
+                cursor: pointer;
+                border-radius: 8px;
+                border: none;
+                font-family: 'Roboto', sans-serif;
+                font-weight: 500;
+                box-shadow: 0 2px 4px 0 rgba(0,0,0,0.2);
+            }}
+            .login-btn:hover {{
+                box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+                background-color: #357ae8;
+            }}
+            .container {{
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 50vh;
+            }}
+            </style>
+            <div class="container">
+                <h1>⚡ Energy Monitor</h1>
+                <p>Du må logge inn for å se strømdata.</p>
+                <a href="{auth_url}" target="_self">
+                    <button class="login-btn">
+                        Logg inn med Google
+                    </button>
                 </a>
             </div>
         """, unsafe_allow_html=True)
-        st.stop() # Stopp videre kjøring til vi er logget inn
+        
+        # Stopp resten av appen fra å kjøre
+        st.stop()
