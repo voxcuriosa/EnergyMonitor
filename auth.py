@@ -7,9 +7,9 @@ class GoogleAuth:
     def __init__(self):
         # Hent secrets
         try:
-            self.client_config = st.secrets["google_auth"]
+            self.client_config = st.secrets["google"]
         except KeyError:
-            st.error("Mangler Google Auth konfigurasjon i secrets.toml")
+            st.error("Mangler Google Auth konfigurasjon i secrets.toml (se etter [google])")
             st.stop()
             
         self.scopes = [
