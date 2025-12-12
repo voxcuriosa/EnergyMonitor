@@ -35,7 +35,9 @@ class GoogleAuth:
         
         # Prepare config struct for Google Auth Library
         # The library expects {"web": { ... }} structure
-        config_dict = {"web": self.client_config}
+        # Must convert to dict() because st.secrets is immutable
+        client_config = dict(self.client_config)
+        config_dict = {"web": client_config}
         
         # Ensure auth_uri and token_uri are present (often not in minimal secrets)
         if "auth_uri" not in config_dict["web"]:
