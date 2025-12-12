@@ -59,7 +59,7 @@ def authenticate_user():
 
     # Hent konfigurasjon
     client_config = get_google_auth_config()
-    redirect_uri = client_config["web"]["redirect_uri"]
+    redirect_uri = client_config["web"]["redirect_uri"].rstrip("/")
 
     # 2. LAG FLOW-OBJEKTET
     # Dette objektet styrer hele dansen med Google.
@@ -160,6 +160,13 @@ def authenticate_user():
                 </a>
             </div>
         """, unsafe_allow_html=True)
+        
+        # DEBUG INFO (Kun synlig hvis man åpner den)
+        with st.expander("🛠️ Debug Info (Klikk her hvis innlogging feiler)"):
+            st.write(f"**Client ID som brukes:** `{client_config['web'].get('client_id')}`")
+            st.write(f"**Redirect URI som brukes:** `{redirect_uri}`")
+            st.warning("Sjekk at disse stemmer NØYAKTIG med det som står i Google Cloud Console.")
+            st.info("Tips: Pass på at det ikke er noen mellomrom før eller etter ID-ene i secrets.toml")
         
         # Stopp resten av appen fra å kjøre
         st.stop()
