@@ -5,15 +5,19 @@ import os
 
 class HomeyClient:
     def __init__(self):
-        # Try to get credentials from environment variables first (for GitHub Actions)
-        self.homey_id = os.environ.get("HOMEY_ID")
-        self.api_key = os.environ.get("API_KEY")
+        # Authenticate using Streamlit Secrets or Environment Variables
+        try:
+            # Check Streamlit secrets first
+            import streamlit as st
+            self.homey_id = st.secrets["HOMEY_ID"]
+            self.api_key = st.secrets["HOMEY_API_KEY"]
+        except (ImportError, FileNotFoundError, KeyError):
+            # Fallback to Environment Variables
+            self.homey_id = os.environ.get("HOMEY_ID")
+            self.api_key = os.environ.get("HOMEY_API_KEY")
         
-        # Fallback to hardcoded values (for local testing if env vars missing)
-        if not self.homey_id:
-            self.homey_id = "5c9096191244054e36667527"
-        if not self.api_key:
-            self.api_key = "490a6d05-9551-4e43-9b43-46d332661596"
+        if not self.homey_id or not self.api_key:
+            raise ValueError("Mangler Homey ID eller API Key. Sjekk secrets.toml eller miljøvariabler.")
             
         self.base_url = f"https://{self.homey_id}.connect.athom.com/api/manager/insights"
         self.headers = {

@@ -2,29 +2,34 @@ import streamlit as st
 import pandas as pd
 from homey_client import HomeyClient
 from database import save_energy_readings, get_energy_readings
+from auth import GoogleAuth
 
 st.set_page_config(page_title="Strømovervåking", page_icon="⚡", layout="wide")
 
+# --- Version Logic ---
+def get_version():
+    try:
+        with open("version.txt", "r") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return "1.00"
+
+current_version = get_version()
+st.sidebar.markdown(f"**v{current_version}**")
+
 st.title("⚡ Strømforbruk (Homey Pro)")
 
-# Check password (optional simple protection)
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
+# --- Authentication ---
+authenticator = GoogleAuth()
+# Sjekk auth og stopp hvis ikke logget inn
+user_info = authenticator.check_auth(allowed_emails=["borchgrevink@gmail.com"])
 
-# Try to get password from secrets, or default to open if not set
-try:
-    APP_PASSWORD = st.secrets["APP_PASSWORD"]
-    if not st.session_state.authenticated:
-        password = st.text_input("Skriv inn passord", type="password")
-        if password == APP_PASSWORD:
-            st.session_state.authenticated = True
-            st.rerun()
-        elif password:
-            st.error("Feil passord")
-        st.stop()
-except KeyError:
-    # No password configured, assume open
-    pass
+# Vis brukerinfo i sidebar
+st.sidebar.divider()
+st.sidebar.write(f"👤 {user_info.get('name', 'Bruker')}")
+if st.sidebar.button("Logg ut"):
+    st.session_state.clear()
+    st.rerun()
 
 # --- Main App Logic ---
 
