@@ -17,6 +17,10 @@ def get_version():
 current_version = get_version()
 st.sidebar.markdown(f"**v{current_version}**")
 
+# --- AUTHENTICATION ---
+# Vi henter innlogging fra auth.py. Denne funksjonen stopper appen hvis man ikke er logget inn.
+user_info = auth.authenticate_user()
+
 # Sjekk om e-posten har tilgang
 ALLOWED_USERS = ["borchgrevink@gmail.com"]
 
