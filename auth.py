@@ -33,8 +33,18 @@ class GoogleAuth:
             # Fallback guessing if not specified
             redirect_uri = "http://localhost:8501" 
         
+        # Prepare config struct for Google Auth Library
+        # The library expects {"web": { ... }} structure
+        config_dict = {"web": self.client_config}
+        
+        # Ensure auth_uri and token_uri are present (often not in minimal secrets)
+        if "auth_uri" not in config_dict["web"]:
+            config_dict["web"]["auth_uri"] = "https://accounts.google.com/o/oauth2/auth"
+        if "token_uri" not in config_dict["web"]:
+            config_dict["web"]["token_uri"] = "https://oauth2.googleapis.com/token"
+
         flow = google_auth_oauthlib.flow.Flow.from_client_config(
-            self.client_config,
+            config_dict,
             scopes=self.scopes,
             redirect_uri=redirect_uri 
         )
