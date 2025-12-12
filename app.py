@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from homey_client import HomeyClient
 from database import save_energy_readings, get_energy_readings
-from auth import GoogleAuth
+import auth
 
 st.set_page_config(page_title="Strømovervåking", page_icon="⚡", layout="wide")
 
