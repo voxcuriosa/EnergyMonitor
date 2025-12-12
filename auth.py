@@ -75,8 +75,18 @@ class GoogleAuth:
                 credentials = flow.credentials
                 
                 # Hent brukerinfo
-                service = build('oauth2', 'v2', credentials=credentials)
-                user_info = service.userinfo().get().execute()
+                # Hent brukerinfo via People API (siden OAuth2 API er vanskelig å finne/enable)
+                service = build('people', 'v1', credentials=credentials)
+                person = service.people().get(
+                    resourceName='people/me', 
+                    personFields='names,emailAddresses'
+                ).execute()
+                
+                # Parse People API response til vårt format
+                email = person.get('emailAddresses', [])[0]['value']
+                name = person.get('names', [])[0]['displayName']
+                
+                user_info = {"email": email, "name": name}
                 
                 st.session_state["google_auth_user"] = user_info
                 
