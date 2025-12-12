@@ -8,3 +8,4 @@ tomli
 google-auth-oauthlib
 google-auth-httplib2
 requests-oauthlib
+google-api-python-client
