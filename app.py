@@ -17,12 +17,6 @@ def get_version():
 current_version = get_version()
 st.sidebar.markdown(f"**v{current_version}**")
 
-st.title("⚡ Strømforbruk (Homey Pro)")
-
-# --- AUTHENTICATION ---
-# Vi henter innlogging fra auth.py. Denne funksjonen stopper appen hvis man ikke er logget inn.
-user_info = auth.authenticate_user()
-
 # Sjekk om e-posten har tilgang
 ALLOWED_USERS = ["borchgrevink@gmail.com"]
 
@@ -38,6 +32,8 @@ st.sidebar.success(f"Logget inn som: {user_info['name']}")
 if st.sidebar.button("Logg ut"):
     del st.session_state["user_info"]
     st.rerun()
+
+st.title("⚡ Strømforbruk (Homey Pro)")
 
 # --- Main App Logic ---
 
