@@ -114,7 +114,9 @@ def authenticate_user():
     else:
         # Generer login-URL
         auth_url, _ = flow.authorization_url(
-            prompt='consent'
+            prompt='consent',
+            access_type='offline',
+            include_granted_scopes='true'
         )
 
         st.markdown(f"""
@@ -150,7 +152,7 @@ def authenticate_user():
             <div class="container">
                 <h1>⚡ Energy Monitor</h1>
                 <p>Du må logge inn for å se strømdata.</p>
-                <a href="{auth_url}" target="_self">
+                <a href="{auth_url}" target="_blank">
                     <button class="login-btn">
                         Logg inn med Google
                     </button>
