@@ -16,8 +16,14 @@ except Exception as e:
 # 2. Test Flow Generation
 st.subheader("2. Flow URL Test")
 try:
+    config = dict(google_secrets)
+    if "auth_uri" not in config:
+        config["auth_uri"] = "https://accounts.google.com/o/oauth2/auth"
+    if "token_uri" not in config:
+        config["token_uri"] = "https://oauth2.googleapis.com/token"
+
     flow = google_auth_oauthlib.flow.Flow.from_client_config(
-        {"web": dict(google_secrets)},
+        {"web": config},
         scopes=["openid", "https://www.googleapis.com/auth/userinfo.email"],
         redirect_uri=google_secrets['redirect_uri'].rstrip('/')
     )
