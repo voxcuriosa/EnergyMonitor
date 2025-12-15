@@ -9,7 +9,8 @@ import os
 # "userinfo.email" lets us check who you are.
 SCOPES = [
     "openid",
-    "https://www.googleapis.com/auth/userinfo.email"
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile"
 ]
 
 def get_google_auth_config():
