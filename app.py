@@ -216,6 +216,11 @@ if not readings_df.empty:
             display_df[husholdning_col] = ""
 
         for idx, row in display_df.iterrows():
+            # Check if we already have real data from DB (Totalt is now being fetched)
+            existing_val = display_df.at[idx, husholdning_col]
+            if existing_val and existing_val != "" and existing_val != "0" and existing_val != 0:
+                continue
+
             periode = row['Periode']
             if "**Sum" in periode:
                 try:
