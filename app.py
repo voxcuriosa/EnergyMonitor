@@ -45,23 +45,26 @@ st.title("⚡ Strømforbruk (Homey Pro)")
 col1, col2 = st.columns([1, 1])
 with col1:
     if st.button("Hent strømdata fra Homey nå"):
-        with st.spinner("Kobler til Homey..."):
-            client = HomeyClient()
-            data = client.get_energy_data()
-            if data:
-                if save_energy_readings(data):
-                    st.success(f"Hentet og lagret data for {len(data)} enheter.")
-                    st.rerun()
+        try:
+            with st.spinner("Kobler til Homey..."):
+                client = HomeyClient()
+                data = client.get_energy_data()
+                if data:
+                    if save_energy_readings(data):
+                        st.success(f"Hentet og lagret data for {len(data)} enheter.")
+                        st.rerun()
+                    else:
+                        st.error("Kunne ikke lagre data til databasen.")
                 else:
-                    st.error("Kunne ikke lagre data til databasen.")
-            else:
-                st.error("Fant ingen data. Sjekk logger for detaljer.")
+                    st.error("Fant ingen data. Sjekk logger for detaljer.")
                 
-    except Exception as e:
-        st.error(f"⚠️ Det oppstod en feil: {e}")
+        except Exception as e:
+            st.error(f"⚠️ Det oppstod en feil: {e}")
 
 with col2:
     if st.button("Slett mellomlager og oppdater"):
+        st.cache_data.clear()
+        st.rerun()
         st.cache_data.clear()
         st.rerun()
 
