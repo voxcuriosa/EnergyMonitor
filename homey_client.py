@@ -26,10 +26,10 @@ class HomeyClient:
         }
 
     def get_energy_data(self):
+        """Fetches all devices and filters for energy usage."""
         try:
             response = requests.get(self.base_url, headers=self.headers, timeout=10)
-            if response.status_code != 200:
-                return []
+            response.raise_for_status() # Raises HTTPError for bad responses (4xx or 5xx)
             
             devices = response.json()
             energy_devices = []
