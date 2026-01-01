@@ -87,14 +87,26 @@ if not readings_df.empty:
     years = [2023, 2024, 2025]
     months = range(1, 13)
     
-    # Helper to get reading at specific date
+    # Helper to get reading at specific date (with fuzzy match)
     def get_reading(date, device_name):
         dev_data = readings_df[readings_df['device_name'] == device_name]
         if dev_data.empty: return None
         
+        # 1. Try exact match
         match = dev_data[dev_data['timestamp'] == date]
         if not match.empty:
             return match.iloc[0]['energy_kwh']
+            
+        # 2. Try fuzzy match (within 3 days forward)
+        # Useful for cases like Dec 2025 where reading is on Dec 2nd
+        window_end = date + pd.Timedelta(days=3)
+        mask = (dev_data['timestamp'] > date) & (dev_data['timestamp'] <= window_end)
+        near_matches = dev_data[mask].sort_values('timestamp')
+        
+        if not near_matches.empty:
+            # Return the first reading found in the window
+            return near_matches.iloc[0]['energy_kwh']
+            
         return None
 
     month_names = ["Januar", "Februar", "Mars", "April", "Mai", "Juni", 
