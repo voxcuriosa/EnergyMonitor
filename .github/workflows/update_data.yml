@@ -27,9 +27,7 @@ jobs:
         # Ensure we have explicit dependencies if requirements.txt is minimal
         pip install requests pandas sqlalchemy psycopg2-binary google-auth-oauthlib google-api-python-client streamlit
 
-    - name: Download Aiven CA Certificate
-      run: |
-        curl -o ca.pem https://aiven.io/assets/ca/ca.pem
+
 
     - name: Run Update Script
       env:

@@ -31,7 +31,13 @@ def get_db_connection():
              return None
 
         # Construct the connection string
-        db_url = f"postgresql://{user}:{password}@{host}:{port}/{dbname}?sslmode={sslmode}&sslrootcert={sslrootcert}"
+        db_url = f"postgresql://{user}:{password}@{host}:{port}/{dbname}?sslmode={sslmode}"
+        
+        # Only add sslrootcert if the file actually exists
+        if sslrootcert and os.path.exists(sslrootcert):
+            db_url += f"&sslrootcert={sslrootcert}"
+        elif sslrootcert:
+             print(f"DEBUG: sslrootcert '{sslrootcert}' not found. Connecting without it (sslmode={sslmode}).")
         
         engine = create_engine(db_url)
         return engine
