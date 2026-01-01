@@ -15,7 +15,7 @@ def get_db_connection():
             user = secrets['user']
             password = secrets['password']
             sslmode = secrets['sslmode']
-            sslrootcert = secrets['sslrootcert']
+            sslrootcert = secrets.get('sslrootcert')
         except (FileNotFoundError, KeyError):
             # Fallback to environment variables (for GitHub Actions)
             host = os.environ.get("POSTGRES_HOST")
@@ -87,6 +87,7 @@ def save_energy_readings(readings):
                 conn.commit()
             return True
         except Exception as e:
+            print(f"DEBUG Error saving: {e}")
             st.error(f"Error saving energy readings: {e}")
             return False
     return False

@@ -26,7 +26,7 @@ def main():
     
     data = [{
         "timestamp": timestamp,
-        "device_name": device_name,
+        "name": device_name,
         "energy_kwh": energy_val,
         "power_w": 0,
         "id": "manual_insert"
