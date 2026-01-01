@@ -115,6 +115,18 @@ if not readings_df.empty:
         11: 392  # November
     }
 
+    # Manual Data for Totalt (injected later, but used here to force row creation)
+    manual_data = {
+        2024: {
+            1: 3386, 2: 2466, 3: 1826, 4: 2036, 5: 1405, 6: 1495,
+            7: 1313, 8: 1456, 9: 1511, 10: 1802, 11: 2273, 12: 2833
+        },
+        2025: {
+            1: 3148, 2: 2654, 3: 2362, 4: 1679, 5: 1549, 6: 1099,
+            7: 1199, 8: 1224, 9: 1382, 10: 1921, 11: 2172, 12: 2561
+        }
+    }
+
     for year in years:
         year_total = {dev: 0.0 for dev in devices}
         has_data_for_year = False
@@ -152,6 +164,10 @@ if not readings_df.empty:
                     has_month_data = True
                 else:
                     row_data[dev] = ""
+            
+            # Force row creation if we have manual data for this month
+            if year in manual_data and month in manual_data[year]:
+                has_month_data = True
             
             if has_month_data:
                 rows.append(row_data)
@@ -208,16 +224,8 @@ if not readings_df.empty:
         
         # --- Inject Manual Data for Totalt ---
         husholdning_col = "Totalt"
-        manual_data = {
-            2024: {
-                1: 3386, 2: 2466, 3: 1826, 4: 2036, 5: 1405, 6: 1495,
-                7: 1313, 8: 1456, 9: 1511, 10: 1802, 11: 2273, 12: 2833
-            },
-            2025: {
-                1: 3148, 2: 2654, 3: 2362, 4: 1679, 5: 1549, 6: 1099,
-                7: 1199, 8: 1224, 9: 1382, 10: 1921, 11: 2172, 12: 2561
-            }
-        }
+        # manual_data moved to top of file
+
         
         if husholdning_col not in display_df.columns:
             display_df[husholdning_col] = ""
