@@ -55,7 +55,11 @@ with col1:
                 else:
                     st.error("Kunne ikke lagre data til databasen.")
             else:
-                st.error("Fant ingen data eller kunne ikke koble til Homey.")
+                st.error("Fant ingen data. Sjekk logger for detaljer.")
+                
+    except Exception as e:
+        st.error(f"⚠️ Det oppstod en feil: {e}")
+
 with col2:
     if st.button("Slett mellomlager og oppdater"):
         st.cache_data.clear()
