@@ -19,7 +19,7 @@ class HomeyClient:
         if not self.homey_id or not self.api_key:
             raise ValueError("Mangler Homey ID eller API Key. Sjekk secrets.toml eller miljøvariabler.")
             
-        self.base_url = f"https://{self.homey_id}.connect.athom.com/api/manager/insights"
+        self.base_url = f"https://{self.homey_id}.connect.athom.com/api/manager/devices/device"
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
