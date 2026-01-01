@@ -27,72 +27,68 @@ class HomeyClient:
 
     def get_energy_data(self):
         """Fetches all devices and filters for energy usage."""
-        try:
-            response = requests.get(self.base_url, headers=self.headers, timeout=10)
-            response.raise_for_status() # Raises HTTPError for bad responses (4xx or 5xx)
-            
-            devices = response.json()
-            energy_devices = []
-            
-            # Name Mapping (Canonical Name <- Homey Name)
-            # Homey Name might have trailing spaces or be different
-            NAME_MAPPING = {
-                "Bad": "Bad - Varmekabler",
-                "Bad - Varmekabler ": "Bad - Varmekabler",
-                "Bad kjeller": "Bad kjeller - Varmekabler",
-                "Bad kjeller - Varmekabler ": "Bad kjeller - Varmekabler",
-                "Stue - Varmekabler ": "Stue",
-                "Stue - Varmekabler": "Stue",
-                "Kjellergang - Varme": "Kjellergang",
-                "Casper - Varme": "Casper",
-                "Cornelius - Varmekabler ": "Cornelius",
-                "Cornelius - Varmekabler": "Cornelius",
-                "Varmepumpe ": "Varmepumpe",
-                "Vindfang - Varmekabler": "Vindfang", # Assumption
-                "Vindfang - Varmekabler ": "Vindfang",
-                "CBV  (EHVKFY9X)": "Easee",
-                "Tibber puls": "Totalt",
-                "Tibber puls ": "Totalt",
-            }
-            
-            IGNORED_DEVICES = ["Vann", "Vann "]
+        response = requests.get(self.base_url, headers=self.headers, timeout=10)
+        response.raise_for_status() # Raises HTTPError for bad responses (4xx or 5xx)
+        
+        devices = response.json()
+        energy_devices = []
+        
+        # Name Mapping (Canonical Name <- Homey Name)
+        # Homey Name might have trailing spaces or be different
+        NAME_MAPPING = {
+            "Bad": "Bad - Varmekabler",
+            "Bad - Varmekabler ": "Bad - Varmekabler",
+            "Bad kjeller": "Bad kjeller - Varmekabler",
+            "Bad kjeller - Varmekabler ": "Bad kjeller - Varmekabler",
+            "Stue - Varmekabler ": "Stue",
+            "Stue - Varmekabler": "Stue",
+            "Kjellergang - Varme": "Kjellergang",
+            "Casper - Varme": "Casper",
+            "Cornelius - Varmekabler ": "Cornelius",
+            "Cornelius - Varmekabler": "Cornelius",
+            "Varmepumpe ": "Varmepumpe",
+            "Vindfang - Varmekabler": "Vindfang", # Assumption
+            "Vindfang - Varmekabler ": "Vindfang",
+            "CBV  (EHVKFY9X)": "Easee",
+            "Tibber puls": "Totalt",
+            "Tibber puls ": "Totalt",
+        }
+        
+        IGNORED_DEVICES = ["Vann", "Vann "]
 
-            for dev_id, dev in devices.items():
-                caps = dev.get('capabilities', [])
-                if 'meter_power' in caps: # Only interested in devices that measure total energy
-                    name = dev.get('name', 'Unknown')
+        for dev_id, dev in devices.items():
+            caps = dev.get('capabilities', [])
+            if 'meter_power' in caps: # Only interested in devices that measure total energy
+                name = dev.get('name', 'Unknown')
+                
+                if name in IGNORED_DEVICES:
+                    continue
                     
-                    if name in IGNORED_DEVICES:
-                        continue
-                        
-                    # Apply mapping
-                    if name in NAME_MAPPING:
-                        name = NAME_MAPPING[name]
-                        
-                    capabilitiesObj = dev.get('capabilitiesObj', {})
+                # Apply mapping
+                if name in NAME_MAPPING:
+                    name = NAME_MAPPING[name]
                     
-                    # Current Power (W)
-                    power_w = 0
-                    if 'measure_power' in capabilitiesObj:
-                        power_w = capabilitiesObj['measure_power'].get('value', 0)
-                        
-                    # Total Energy (kWh)
-                    energy_kwh = 0
-                    if 'meter_power' in capabilitiesObj:
-                        energy_kwh = capabilitiesObj['meter_power'].get('value', 0)
-                        
-                    energy_devices.append({
-                        "id": dev_id,
-                        "name": name,
-                        "power_w": power_w,
-                        "energy_kwh": energy_kwh,
-                        "timestamp": datetime.now()
-                    })
-            
-            return energy_devices
-        except Exception as e:
-            print(f"Error fetching Homey data: {e}")
-            return []
+                capabilitiesObj = dev.get('capabilitiesObj', {})
+                
+                # Current Power (W)
+                power_w = 0
+                if 'measure_power' in capabilitiesObj:
+                    power_w = capabilitiesObj['measure_power'].get('value', 0)
+                    
+                # Total Energy (kWh)
+                energy_kwh = 0
+                if 'meter_power' in capabilitiesObj:
+                    energy_kwh = capabilitiesObj['meter_power'].get('value', 0)
+                    
+                energy_devices.append({
+                    "id": dev_id,
+                    "name": name,
+                    "power_w": power_w,
+                    "energy_kwh": energy_kwh,
+                    "timestamp": datetime.now()
+                })
+        
+        return energy_devices
 
     def get_energy_dataframe(self):
         data = self.get_energy_data()
