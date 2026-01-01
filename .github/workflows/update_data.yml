@@ -42,3 +42,20 @@ jobs:
         POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
         POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       run: python update_data.py
+
+    - name: Run Export Script (Backup)
+      env:
+        # Same credentials needed for database access
+        POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
+        POSTGRES_PORT: ${{ secrets.POSTGRES_PORT }}
+        POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+        POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+        POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      run: python export_data.py
+
+    - name: Commit and Push Backup
+      run: |
+        git config --global user.name 'GitHub Action'
+        git config --global user.email 'action@github.com'
+        git add backup_energy_data.csv
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update backup CSV" && git push)
