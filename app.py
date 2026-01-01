@@ -127,15 +127,36 @@ if not readings_df.empty:
         11: 392  # November
     }
 
-    # Manual Data for Totalt (injected later, but used here to force row creation)
+    # Manual Data for devices (injected later)
+    # Structure: { Year: { Month: { "DeviceName": Value } } }
     manual_data = {
         2024: {
-            1: 3386, 2: 2466, 3: 1826, 4: 2036, 5: 1405, 6: 1495,
-            7: 1313, 8: 1456, 9: 1511, 10: 1802, 11: 2273, 12: 2833
+            1: {"Totalt": 3386, "Easee": 544}, 
+            2: {"Totalt": 2466, "Easee": 403}, 
+            3: {"Totalt": 1826, "Easee": 236}, 
+            4: {"Totalt": 2036, "Easee": 247}, 
+            5: {"Totalt": 1405, "Easee": 343}, 
+            6: {"Totalt": 1495, "Easee": 386},
+            7: {"Totalt": 1313, "Easee": 287}, 
+            8: {"Totalt": 1456, "Easee": 384}, 
+            9: {"Totalt": 1511, "Easee": 394}, 
+            10: {"Totalt": 1802, "Easee": 341}, 
+            11: {"Totalt": 2273, "Easee": 396}, 
+            12: {"Totalt": 2833, "Easee": 523}
         },
         2025: {
-            1: 3148, 2: 2654, 3: 2362, 4: 1679, 5: 1549, 6: 1099,
-            7: 1199, 8: 1224, 9: 1382, 10: 1921, 11: 2172, 12: 2561
+            1: {"Totalt": 3148, "Easee": 593}, 
+            2: {"Totalt": 2654, "Easee": 445}, 
+            3: {"Totalt": 2362, "Easee": 332}, 
+            4: {"Totalt": 1679, "Easee": 190}, 
+            5: {"Totalt": 1549, "Easee": 282}, 
+            6: {"Totalt": 1099, "Easee": 225},
+            7: {"Totalt": 1199, "Easee": 289}, 
+            8: {"Totalt": 1224, "Easee": 265}, 
+            9: {"Totalt": 1382, "Easee": 262}, 
+            10: {"Totalt": 1921, "Easee": 454}, 
+            11: {"Totalt": 2172, "Easee": 456}, 
+            12: {"Totalt": 2561, "Easee": 514}
         }
     }
 
@@ -234,29 +255,45 @@ if not readings_df.empty:
     if rows:
         display_df = pd.DataFrame(rows)
         
-        # --- Inject Manual Data for Totalt ---
-        husholdning_col = "Totalt"
-        # manual_data moved to top of file
-
+        # --- Inject Manual Data ---
+        # manual_data is defined at top of file
         
-        if husholdning_col not in display_df.columns:
-            display_df[husholdning_col] = ""
+        # Ensure columns exist
+        for year_data in manual_data.values():
+            for month_data in year_data.values():
+                for dev in month_data.keys():
+                    if dev not in display_df.columns:
+                        display_df[dev] = ""
+
+        husholdning_col = "Totalt" # Still needed for ordering?
 
         for idx, row in display_df.iterrows():
-            # Check if we already have real data from DB (Totalt is now being fetched)
-            existing_val = display_df.at[idx, husholdning_col]
-            if existing_val and existing_val != "" and existing_val != "0" and existing_val != 0:
-                continue
-
             periode = row['Periode']
+            
+            # Logic for "Sum YYYY" rows
             if "**Sum" in periode:
                 try:
                     year = int(periode.replace("**Sum ", "").replace("**", ""))
                     if year in manual_data:
-                        total = sum(manual_data[year].values())
-                        display_df.at[idx, husholdning_col] = f"**{total}**"
+                        # Sum up for each device in manual_data
+                        # We need to iterate all months in that year and sum per device
+                        device_sums = {}
+                        for m_data in manual_data[year].values():
+                            for dev, val in m_data.items():
+                                device_sums[dev] = device_sums.get(dev, 0) + val
+                        
+                        for dev, total in device_sums.items():
+                             # Check if we should override (logic: existing valid Total might be partial or full?)
+                             # Current logic: If DB has data, we trust DB. But for Totalt/Easee 2024/2025 DB is effectively empty/incomplete.
+                             # Let's check strict "if existing is almost zero/empty".
+                             existing_val = display_df.at[idx, dev] if dev in display_df.columns else ""
+                             if not existing_val or existing_val == "" or existing_val == "0" or existing_val == 0 or existing_val == "0.0":
+                                 display_df.at[idx, dev] = f"**{total}**"
+
                 except ValueError:
                     pass
+            
+            # Logic for monthly rows "Month YYYY"
             else:
                 try:
                     parts = periode.split(" ")
@@ -264,8 +301,13 @@ if not readings_df.empty:
                         month_name = parts[0]
                         year = int(parts[1])
                         month_idx = month_names.index(month_name) + 1
+                        
                         if year in manual_data and month_idx in manual_data[year]:
-                            display_df.at[idx, husholdning_col] = str(manual_data[year][month_idx])
+                            for dev, val in manual_data[year][month_idx].items():
+                                existing_val = display_df.at[idx, dev] if dev in display_df.columns else ""
+                                if not existing_val or existing_val == "" or existing_val == "0" or existing_val == 0:
+                                    display_df.at[idx, dev] = str(val)
+                                    
                 except (ValueError, IndexError):
                     pass
 
