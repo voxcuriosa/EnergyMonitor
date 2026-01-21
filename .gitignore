@@ -1,0 +1,22 @@
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# VS Code
+.vscode/
+
+# Temporary
+verify_db.py
+verify_db_standalone.py

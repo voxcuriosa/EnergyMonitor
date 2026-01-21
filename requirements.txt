@@ -2,8 +2,8 @@ streamlit
 pandas
 requests
 sqlalchemy
-psycopg2-binary
-psycopg2-binary
+pymysql
+# psycopg2-binary
 tomli
 google-auth-oauthlib
 google-auth-httplib2

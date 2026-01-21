@@ -4,43 +4,43 @@ import os
 from sqlalchemy import create_engine, text
 
 def get_db_connection():
-    """Establishes a connection to the PostgreSQL database."""
+    """Establishes a connection to the Database (MySQL/MariaDB)."""
     try:
         # Try getting secrets from Streamlit secrets first
         try:
-            secrets = st.secrets["postgres"]
-            host = secrets['host']
-            port = secrets['port']
-            dbname = secrets['dbname']
-            user = secrets['user']
-            password = secrets['password']
-            sslmode = secrets['sslmode']
-            sslrootcert = secrets.get('sslrootcert')
+            if "mysql" in st.secrets:
+                secrets = st.secrets["mysql"]
+                host = secrets['host']
+                port = secrets['port']
+                dbname = secrets['dbname']
+                user = secrets['user']
+                password = secrets['password']
+                # Construct the connection string for MySQL
+                db_url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{dbname}"
+                
+                engine = create_engine(db_url)
+                return engine
+                
+            elif "postgres" in st.secrets:
+                 # Keep legacy support or fallback if needed (though we migrated)
+                secrets = st.secrets["postgres"]
+                host = secrets['host']
+                port = secrets['port']
+                dbname = secrets['dbname']
+                user = secrets['user']
+                password = secrets['password']
+                sslmode = secrets['sslmode']
+                db_url = f"postgresql://{user}:{password}@{host}:{port}/{dbname}?sslmode={sslmode}"
+                engine = create_engine(db_url)
+                return engine
+
         except (FileNotFoundError, KeyError):
             # Fallback to environment variables (for GitHub Actions)
-            host = os.environ.get("POSTGRES_HOST")
-            port = os.environ.get("POSTGRES_PORT")
-            dbname = os.environ.get("POSTGRES_DB")
-            user = os.environ.get("POSTGRES_USER")
-            password = os.environ.get("POSTGRES_PASSWORD")
-            sslmode = "require" 
-            sslrootcert = "ca.pem" 
+            pass
             
-        if not host or not user or not password:
-             print("DEBUG: Missing database credentials")
-             return None
+        print("DEBUG: Missing database credentials in secrets.toml")
+        return None
 
-        # Construct the connection string
-        db_url = f"postgresql://{user}:{password}@{host}:{port}/{dbname}?sslmode={sslmode}"
-        
-        # Only add sslrootcert if the file actually exists
-        if sslrootcert and os.path.exists(sslrootcert):
-            db_url += f"&sslrootcert={sslrootcert}"
-        elif sslrootcert:
-             print(f"DEBUG: sslrootcert '{sslrootcert}' not found. Connecting without it (sslmode={sslmode}).")
-        
-        engine = create_engine(db_url)
-        return engine
     except Exception as e:
         print(f"DEBUG: Database connection error: {e}")
         return None
