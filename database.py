@@ -21,21 +21,9 @@ def get_db_connection():
                 engine = create_engine(db_url)
                 return engine
                 
-            elif "postgres" in st.secrets:
-                 # Keep legacy support or fallback if needed (though we migrated)
-                secrets = st.secrets["postgres"]
-                host = secrets['host']
-                port = secrets['port']
-                dbname = secrets['dbname']
-                user = secrets['user']
-                password = secrets['password']
-                sslmode = secrets['sslmode']
-                db_url = f"postgresql://{user}:{password}@{host}:{port}/{dbname}?sslmode={sslmode}"
-                engine = create_engine(db_url)
                 return engine
-
+                
         except (FileNotFoundError, KeyError):
-            # Fallback to environment variables (for GitHub Actions)
             pass
             
         print("DEBUG: Missing database credentials in secrets.toml")

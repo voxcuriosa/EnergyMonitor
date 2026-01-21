@@ -20,3 +20,4 @@ ENV/
 # Temporary
 verify_db.py
 verify_db_standalone.py
+migrate_full_data.py

@@ -1,53 +1,30 @@
-import psycopg2
 import streamlit as st
-from datetime import datetime
 import os
+from database import get_energy_readings
+
+# This script verifies data is readable using the app's own logic
+# It assumes secrets.toml is configured correctly for MySQL
 
 def check_db():
+    print("🚀 Verifying Data Access via App Logic (MySQL)...")
     try:
-        # Load secrets manually since we might not run via streamlit run
-        secrets = st.secrets["postgres"]
+        df = get_energy_readings()
         
-        print(f"📂 Current Directory: {os.getcwd()}")
-        ca_path = os.path.abspath("ca.pem")
-        print(f"🔒 Cert Path: {ca_path}")
-        print(f"👀 Does cert exist? {os.path.exists(ca_path)}")
-
-        print("🚀 Attempting to connect to DB...")
-        conn = psycopg2.connect(
-            host=secrets["host"],
-            port=secrets["port"],
-            dbname=secrets["dbname"],
-            user=secrets["user"],
-            password=secrets["password"],
-            sslmode=secrets["sslmode"],
-            connect_timeout=5
-        )
-        print("✅ Connected!")
-        
-        cur = conn.cursor()
-        
-        # Check specifically for Totalt on 2025-01-01
-        query = """
-            SELECT * FROM energy_readings 
-            WHERE device_name = 'Totalt' 
-            AND timestamp >= '2025-01-01 00:00:00'
-            AND timestamp < '2025-01-02 00:00:00';
-        """
-        
-        cur.execute(query)
-        rows = cur.fetchall()
-        
-        if rows:
-            print(f"✅ FOUND DATA! Found {len(rows)} entries.")
-            for row in rows:
-                print(f"   - {row}")
-        else:
-            print("❌ NO DATA FOUND for 'Totalt' on 2025-01-01.")
+        if not df.empty:
+            print(f"✅ FOUND DATA! Found {len(df)} entries.")
+            print("First 5 rows:")
+            print(df.head())
             
-        cur.close()
-        conn.close()
-
+            # Additional check for 'Totalt' device
+            totalt_df = df[df['device_name'] == 'Totalt']
+            if not totalt_df.empty:
+                 print(f"✅ Found 'Totalt' entries: {len(totalt_df)}")
+            else:
+                 print("⚠️ No 'Totalt' device found (might be normal if not in data yet).")
+                 
+        else:
+            print("❌ NO DATA FOUND in database via get_energy_readings().")
+            
     except Exception as e:
         print(f"❌ Error: {e}")
 
