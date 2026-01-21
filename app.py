@@ -84,7 +84,7 @@ if not readings_df.empty:
     # Prepare rows
     rows = []
     
-    years = [2023, 2024, 2025]
+    years = [2023, 2024, 2025, 2026]
     months = range(1, 13)
     
     # Helper to get reading at specific date (with fuzzy match)

@@ -23,10 +23,28 @@ def get_db_connection():
                 
                 return engine
                 
+                return engine
+                
         except (FileNotFoundError, KeyError):
             pass
+
+        # Fallback to Environment Variables (for GitHub Actions)
+        # We need this because secrets.toml is not available in the Action runner
+        try:
+             host = os.environ.get("MYSQL_HOST")
+             user = os.environ.get("MYSQL_USER")
+             password = os.environ.get("MYSQL_PASSWORD")
+             dbname = os.environ.get("MYSQL_DB")
+             port = os.environ.get("MYSQL_PORT", 3306)
+             
+             if host and user and password and dbname:
+                 db_url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{dbname}"
+                 engine = create_engine(db_url)
+                 return engine
+        except Exception:
+             pass
             
-        print("DEBUG: Missing database credentials in secrets.toml")
+        print("DEBUG: Missing database credentials in secrets.toml and environment variables.")
         return None
 
     except Exception as e:
