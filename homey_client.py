@@ -77,7 +77,11 @@ class HomeyClient:
                     
                 # Total Energy (kWh)
                 energy_kwh = 0
-                if 'meter_power' in capabilitiesObj:
+                # Prioritize 'meter_power.imported' (Tibber Puls uses this for total accumulation)
+                if 'meter_power.imported' in capabilitiesObj:
+                    energy_kwh = capabilitiesObj['meter_power.imported'].get('value', 0)
+                # Fallback to standard 'meter_power' if imported is missing or zero (though zero might be valid, usually we want the total)
+                if energy_kwh == 0 and 'meter_power' in capabilitiesObj:
                     energy_kwh = capabilitiesObj['meter_power'].get('value', 0)
                     
                 energy_devices.append({
