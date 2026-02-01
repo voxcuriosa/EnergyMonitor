@@ -381,7 +381,7 @@ if not readings_df.empty:
                          if y in manual_data and m_idx in manual_data[y]:
                              val = manual_data[y][m_idx].get(d, 0)
                              
-                         # If manual data is 0 or low, try DB
+                         # If manual data is 0 or low, try DB utilizing the robust get_reading helper
                          if val == 0:
                              start_date = pd.Timestamp(y, m_idx, 1)
                              if m_idx == 12:
@@ -389,18 +389,18 @@ if not readings_df.empty:
                              else:
                                  end_date = pd.Timestamp(y, m_idx+1, 1)
                              
-                             dev_readings = readings_df[
-                                (readings_df['device_name'] == d) & 
-                                (readings_df['timestamp'] >= start_date) &
-                                (readings_df['timestamp'] <= end_date)
-                            ].sort_values('timestamp')
+                             # Use get_reading to handle fuzzy matching same as table
+                             val_start = get_reading(start_date, d)
+                             val_end = get_reading(end_date, d)
                              
-                             if not dev_readings.empty:
-                                start_val = dev_readings.iloc[0]['energy_kwh']
-                                end_val = dev_readings.iloc[-1]['energy_kwh']
-                                diff = end_val - start_val
-                                if diff > 0:
-                                    val = diff
+                             if val_start is not None and val_end is not None:
+                                 diff = val_end - val_start
+                                 if diff > 0:
+                                     val = diff
+                                 elif val_end > 0 and diff < 0: 
+                                      # Fallback for some weird resets if any, though table logic 
+                                      # uses: if consumption < 0: consumption = val_end
+                                      val = val_end
                          
                          # Check estimates (Bad kjeller 2025)
                          if y == 2025 and d == "Bad kjeller - Varmekabler" and m_idx in estimates_2025:
