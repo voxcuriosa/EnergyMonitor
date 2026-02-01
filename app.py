@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import altair as alt
 from homey_client import HomeyClient
 from database import save_energy_readings, get_energy_readings
 import auth
@@ -328,14 +329,121 @@ if not readings_df.empty:
         
         # Add Footer (Repeat Headers)
         # Create a dictionary where key=col_name and value=col_name (or bolded)
-        footer_row = {col: f"**{col}**" for col in final_cols}
+        footer_row = {col: f"{col}" for col in final_cols} # Text only, styling via Styler
         # Append using pd.concat
         footer_df = pd.DataFrame([footer_row])
         display_df_filtered = pd.concat([display_df_filtered, footer_df], ignore_index=True)
         
         st.markdown("### Forbruksoversikt")
-        st.dataframe(display_df_filtered, hide_index=True, use_container_width=True)
         
+        # Style the dataframe
+        # Target the last row for header-like styling
+        def style_footer(df):
+            styles = pd.DataFrame('', index=df.index, columns=df.columns)
+            # Apply style to last row
+            styles.iloc[-1] = 'font-weight: bold; background-color: #f0f2f6; border-top: 2px solid #ccc;'
+            return styles
+
+        st.dataframe(
+            display_df_filtered.style.apply(style_footer, axis=None),
+            hide_index=True, 
+            use_container_width=True
+        )
+        
+        # --- BAR CHART SECTION ---
+        st.divider()
+        st.subheader("📊 Sammenligning av år (Stolpediagram)")
+        
+        # 1. Selectors for Chart
+        chart_col1, chart_col2 = st.columns(2)
+        with chart_col1:
+             chart_years = st.multiselect("Velg år:", options=years, default=years)
+        with chart_col2:
+             chart_devices = st.multiselect("Velg enheter:", options=other_cols, default=other_cols[:5]) # Default first 5 to avoid clutter
+             
+        if chart_years and chart_devices:
+            # 2. Prepare Data
+            chart_data = []
+            
+            for y in chart_years:
+                # Calculate total for this year for selected devices
+                # We can reuse the logic from the table loop or re-calculate
+                # Re-calculation is cleaner to ensure correctness
+                
+                # Filter readings for this year
+                 start_date = pd.Timestamp(y, 1, 1)
+                 end_date = pd.Timestamp(y + 1, 1, 1)
+                 
+                 for d in chart_devices:
+                     val = 0
+                     # Check manual data first
+                     if y in manual_data:
+                         # Sum manual months
+                         for m_data in manual_data[y].values():
+                             val += m_data.get(d, 0)
+                             
+                     # If manual data is 0 or low, try DB (same logic as table)
+                     if val == 0:
+                         # DB fetch
+                         dev_readings = readings_df[
+                            (readings_df['device_name'] == d) & 
+                            (readings_df['timestamp'] >= start_date) &
+                            (readings_df['timestamp'] <= end_date)
+                        ].sort_values('timestamp')
+                         
+                         if not dev_readings.empty:
+                            start_val = dev_readings.iloc[0]['energy_kwh']
+                            end_val = dev_readings.iloc[-1]['energy_kwh']
+                            diff = end_val - start_val
+                            if diff > 0:
+                                val = diff
+                     
+                     # Check estimates (Bad kjeller 2025)
+                     if y == 2025 and d == "Bad kjeller - Varmekabler":
+                         val = sum(estimates_2025.values()) # Full year estimate? Or up to current month?
+                         # Let's use the explicit logic: Manual data + calculated rest? 
+                         # Actually earlier we used 'year_total' in the loop. 
+                         # To be perfectly consistent, we should probably grab the values from 'display_df' 
+                         # but display_df contains strings with stars/text.
+                         
+                         # Simplified consistency: Let's use the manually injected sums + db sums.
+                         # Refined: Since we already calculated 'yearly_sums' in the loop above, let's use that!
+                         if y in yearly_sums:
+                             # yearly_sums[y] is a row dict: {'Device': '**123**', ...}
+                             val_str = yearly_sums[y].get(d, "0")
+                             # Clean string
+                             val_clean = val_str.replace("**", "").replace(" (Estimert)", "")
+                             try:
+                                 val = float(val_clean)
+                             except:
+                                 val = 0
+                     
+                     chart_data.append({"År": str(y), "Enhet": d, "kWh": val})
+            
+            if chart_data:
+                chart_df = pd.DataFrame(chart_data)
+                
+                # 3. Render Chart
+                c = alt.Chart(chart_df).mark_bar().encode(
+                    x=alt.X('Enhet', axis=None),
+                    y=alt.Y('kWh', title='Energiforbruk (kWh)'),
+                    color='År',
+                    column=alt.Column('Enhet', header=alt.Header(titleOrient="bottom", labelOrient="bottom")),
+                    tooltip=['År', 'Enhet', 'kWh']
+                ).configure_view(stroke='transparent')
+                
+                # Alternative Grouped Bar (better for many items)
+                c_grouped = alt.Chart(chart_df).mark_bar().encode(
+                    x=alt.X('Enhet', axis=alt.Axis(title=None)),
+                    y=alt.Y('kWh', title='kWh'),
+                    color='År',
+                    xOffset='År'
+                )
+                
+                st.altair_chart(c_grouped, use_container_width=True)
+            else:
+                 st.info("Ingen data for valgte år/enheter.")
+
         with st.expander("Feilsøking (Debug)"):
             st.write(f"Antall målinger totalt: {len(readings_df)}")
             st.write(f"Unike enheter: {devices}")
