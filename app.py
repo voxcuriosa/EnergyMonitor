@@ -232,7 +232,14 @@ if not readings_df.empty:
                             else:
                                 total_acc += diff
                         else:
-                            total_acc += diff
+                            # Sanity check: If jump is massive (e.g. > 10,000 kWh), 
+                            # it is likely a scale switch (daily -> cumulative) rather than consumption.
+                            if diff < 10000:
+                                total_acc += diff
+                            else:
+                                # If it's a massive jump, we don't add diff, 
+                                # we just update prev_val (done below) to the new scale.
+                                pass 
                         prev_val = curr_val
                 
                 if year == 2025 and dev == "Bad kjeller - Varmekabler":
