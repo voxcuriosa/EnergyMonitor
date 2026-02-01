@@ -12,34 +12,19 @@ def main():
 
     device_name = sys.argv[1]
     energy_val = float(sys.argv[2])
-    
-    if len(sys.argv) > 3:
-        date_str = sys.argv[3]
-        timestamp = datetime.fromisoformat(date_str)
-    else:
-        timestamp = datetime.now()
+    date_str = sys.argv[3] # Expecting YYYY-MM-DD
 
-    print(f"🛠️ Inserting: {device_name} = {energy_val} kWh @ {timestamp}")
-    
     # Check for dry run (safety)
     dry_run = os.environ.get("DRY_RUN", "false").lower() == "true"
     
-    data = [{
-        "timestamp": timestamp,
-        "name": device_name,
-        "energy_kwh": energy_val,
-        "power_w": 0,
-        "id": "manual_insert"
-    }]
-    
     if dry_run:
-        print("🐫 DRY RUN: Not saving.")
+        print(f"🐫 DRY RUN: Would insert {device_name} = {energy_val} kWh @ {date_str}. Not saving.")
         return
 
-    if save_energy_readings(data):
-        print("✅ Successfully inserted.")
+    if insert_manual(device_name, energy_val, date_str):
+        print("✅ Manual insert process completed.")
     else:
-        print("❌ Failed to insert.")
+        print("❌ Manual insert process failed.")
         sys.exit(1)
 
 if __name__ == "__main__":

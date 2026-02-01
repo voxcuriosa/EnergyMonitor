@@ -245,11 +245,7 @@ if not readings_df.empty:
             rows.append(sum_row)
             yearly_sums[year] = sum_row.copy()
             
-            for prev_year in range(year - 1, 2022, -1):
-                if prev_year in yearly_sums:
-                    comp_row = yearly_sums[prev_year].copy()
-                    comp_row['Periode'] = f"**Sum {prev_year}**"
-                    rows.append(comp_row)
+
     
     # Create DataFrame
     if rows:
@@ -329,6 +325,13 @@ if not readings_df.empty:
         
         final_cols = ["Periode"] + selected_devices
         display_df_filtered = display_df[final_cols]
+        
+        # Add Footer (Repeat Headers)
+        # Create a dictionary where key=col_name and value=col_name (or bolded)
+        footer_row = {col: f"**{col}**" for col in final_cols}
+        # Append using pd.concat
+        footer_df = pd.DataFrame([footer_row])
+        display_df_filtered = pd.concat([display_df_filtered, footer_df], ignore_index=True)
         
         st.markdown("### Forbruksoversikt")
         st.dataframe(display_df_filtered, hide_index=True, use_container_width=True)
