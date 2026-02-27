@@ -29,7 +29,14 @@ user_info = auth.authenticate_user()
 # Hvis vi kom hit, er brukeren godkjent!
 st.sidebar.success(f"Logget inn som: {user_info['name']}")
 if st.sidebar.button("Logg ut"):
-    del st.session_state["user_info"]
+    # Fjern ny PIN sesjon
+    if "authenticated" in st.session_state:
+        del st.session_state["authenticated"]
+    
+    # Fjern gammel Google auth sesjon (just in case)
+    if "user_info" in st.session_state:
+        del st.session_state["user_info"]
+        
     st.rerun()
 
 st.title("⚡ Strømforbruk (Homey Pro)")
