@@ -79,6 +79,10 @@ def authenticate_user():
         try:
             code = st.query_params["code"]
             
+            # Gjenopprett code_verifier for PKCE hvis den finnes i session_state
+            if "code_verifier" in st.session_state:
+                flow.code_verifier = st.session_state["code_verifier"]
+            
             # Bytt koden mot tokens
             flow.fetch_token(code=code)
             credentials = flow.credentials
@@ -119,6 +123,10 @@ def authenticate_user():
             access_type='offline',
             include_granted_scopes='true'
         )
+
+        # Lagre code_verifier i session state (for PKCE)
+        if hasattr(flow, "code_verifier"):
+            st.session_state["code_verifier"] = flow.code_verifier
 
         st.markdown(f"""
             <style>
