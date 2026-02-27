@@ -80,21 +80,15 @@ def authenticate_user():
     if "code" in st.query_params:
         try:
             code = st.query_params["code"]
+            returned_state = st.query_params.get("state", "")
             
-            # Gjenopprett code_verifier for PKCE hvis den finnes i session_state
-            # Vi kan sende den direkte til fetch_token hvis den kreves
-            kwargs = {"code": code}
-            if "code_verifier" in st.session_state:
-                kwargs["code_verifier"] = st.session_state["code_verifier"]
-            else:
-                st.error("Kunne ikke finne sikkerhetsnøkkel i session (mulig cookies er deaktivert, eller ny session startet). Prøv på nytt.")
-                if st.button("Start på nytt"):
-                    st.query_params.clear()
-                    st.rerun()
-                st.stop()
+            # Gjenopprett code_verifier deterministisk basert på state og secret
+            client_secret = client_config["web"]["client_secret"]
+            verifier_base = f"{returned_state}:{client_secret}"
+            code_verifier = hashlib.sha256(verifier_base.encode('utf-8')).hexdigest()
             
             # Bytt koden mot tokens
-            flow.fetch_token(**kwargs)
+            flow.fetch_token(code=code, code_verifier=code_verifier)
             credentials = flow.credentials
 
             # VERIFISERING: Hent info om hvem dette er
@@ -127,14 +121,12 @@ def authenticate_user():
 
     # 4. HVIS IKKE INNLOGGET: VIS LOGIN-KNAPP
     else:
-        # PKCE manuell generering for å garantere at det fungerer
-        if "code_verifier" not in st.session_state:
-            # Generer en 64-byte tilfeldig streng
-            verifier_bytes = os.urandom(64)
-            code_verifier = base64.urlsafe_b64encode(verifier_bytes).decode('utf-8').rstrip('=')
-            st.session_state["code_verifier"] = code_verifier
-        else:
-            code_verifier = st.session_state["code_verifier"]
+        # PKCE stateless generering: Vi lager en state, og verifier er en hash av state + secret.
+        # Dette sikrer at Cloud/redirects ikke mister session-state, siden state kommer tilbake i URL.
+        my_state = hashlib.sha256(os.urandom(64)).hexdigest()
+        client_secret = client_config["web"]["client_secret"]
+        verifier_base = f"{my_state}:{client_secret}"
+        code_verifier = hashlib.sha256(verifier_base.encode('utf-8')).hexdigest()
             
         code_challenge = base64.urlsafe_b64encode(
             hashlib.sha256(code_verifier.encode('utf-8')).digest()
@@ -145,6 +137,7 @@ def authenticate_user():
             prompt='consent',
             access_type='offline',
             include_granted_scopes='true',
+            state=my_state,
             code_challenge=code_challenge,
             code_challenge_method='S256'
         )
