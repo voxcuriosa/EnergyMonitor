@@ -80,15 +80,10 @@ def authenticate_user():
     if "code" in st.query_params:
         try:
             code = st.query_params["code"]
-            returned_state = st.query_params.get("state", "")
             
-            # Gjenopprett code_verifier deterministisk basert på state og secret
-            client_secret = client_config["web"]["client_secret"]
-            verifier_base = f"{returned_state}:{client_secret}"
-            code_verifier = hashlib.sha256(verifier_base.encode('utf-8')).hexdigest()
-            
-            # Bytt koden mot tokens
-            flow.fetch_token(code=code, code_verifier=code_verifier)
+            # Ingen PKCE kreves siden vår "web" client-type (med secret) i Google Cloud
+            # uansett er sikker når den kjører server-side.
+            flow.fetch_token(code=code)
             credentials = flow.credentials
 
             # VERIFISERING: Hent info om hvem dette er
@@ -121,25 +116,11 @@ def authenticate_user():
 
     # 4. HVIS IKKE INNLOGGET: VIS LOGIN-KNAPP
     else:
-        # PKCE stateless generering: Vi lager en state, og verifier er en hash av state + secret.
-        # Dette sikrer at Cloud/redirects ikke mister session-state, siden state kommer tilbake i URL.
-        my_state = hashlib.sha256(os.urandom(64)).hexdigest()
-        client_secret = client_config["web"]["client_secret"]
-        verifier_base = f"{my_state}:{client_secret}"
-        code_verifier = hashlib.sha256(verifier_base.encode('utf-8')).hexdigest()
-            
-        code_challenge = base64.urlsafe_b64encode(
-            hashlib.sha256(code_verifier.encode('utf-8')).digest()
-        ).decode('utf-8').rstrip('=')
-
         # Generer login-URL
         auth_url, _ = flow.authorization_url(
             prompt='consent',
             access_type='offline',
-            include_granted_scopes='true',
-            state=my_state,
-            code_challenge=code_challenge,
-            code_challenge_method='S256'
+            include_granted_scopes='true'
         )
 
         st.markdown(f"""
