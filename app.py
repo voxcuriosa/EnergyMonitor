@@ -22,15 +22,9 @@ st.sidebar.markdown(f"**v{current_version}**")
 # Vi henter innlogging fra auth.py. Denne funksjonen stopper appen hvis man ikke er logget inn.
 user_info = auth.authenticate_user()
 
-# Sjekk om e-posten har tilgang
-ALLOWED_USERS = ["borchgrevink@gmail.com"]
-
-if user_info["email"] not in ALLOWED_USERS:
-    st.error(f"Beklager, brukeren {user_info['email']} har ikke tilgang.")
-    if st.button("Logg ut"):
-        del st.session_state["user_info"]
-        st.rerun()
-    st.stop()
+# Sjekk om e-posten har tilgang (Fjernet siden PIN styrer tilgangen)
+# ALLOWED_USERS = ["borchgrevink@gmail.com"]
+# if user_info["email"] not in ALLOWED_USERS: ...
 
 # Hvis vi kom hit, er brukeren godkjent!
 st.sidebar.success(f"Logget inn som: {user_info['name']}")
