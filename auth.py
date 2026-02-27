@@ -2,6 +2,8 @@ import streamlit as st
 import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
 import os
+import hashlib
+import base64
 
 # CONSTANTS
 # Scopes defines what we want to access. 
@@ -80,11 +82,19 @@ def authenticate_user():
             code = st.query_params["code"]
             
             # Gjenopprett code_verifier for PKCE hvis den finnes i session_state
+            # Vi kan sende den direkte til fetch_token hvis den kreves
+            kwargs = {"code": code}
             if "code_verifier" in st.session_state:
-                flow.code_verifier = st.session_state["code_verifier"]
+                kwargs["code_verifier"] = st.session_state["code_verifier"]
+            else:
+                st.error("Kunne ikke finne sikkerhetsnøkkel i session (mulig cookies er deaktivert, eller ny session startet). Prøv på nytt.")
+                if st.button("Start på nytt"):
+                    st.query_params.clear()
+                    st.rerun()
+                st.stop()
             
             # Bytt koden mot tokens
-            flow.fetch_token(code=code)
+            flow.fetch_token(**kwargs)
             credentials = flow.credentials
 
             # VERIFISERING: Hent info om hvem dette er
@@ -117,16 +127,27 @@ def authenticate_user():
 
     # 4. HVIS IKKE INNLOGGET: VIS LOGIN-KNAPP
     else:
+        # PKCE manuell generering for å garantere at det fungerer
+        if "code_verifier" not in st.session_state:
+            # Generer en 64-byte tilfeldig streng
+            verifier_bytes = os.urandom(64)
+            code_verifier = base64.urlsafe_b64encode(verifier_bytes).decode('utf-8').rstrip('=')
+            st.session_state["code_verifier"] = code_verifier
+        else:
+            code_verifier = st.session_state["code_verifier"]
+            
+        code_challenge = base64.urlsafe_b64encode(
+            hashlib.sha256(code_verifier.encode('utf-8')).digest()
+        ).decode('utf-8').rstrip('=')
+
         # Generer login-URL
         auth_url, _ = flow.authorization_url(
             prompt='consent',
             access_type='offline',
-            include_granted_scopes='true'
+            include_granted_scopes='true',
+            code_challenge=code_challenge,
+            code_challenge_method='S256'
         )
-
-        # Lagre code_verifier i session state (for PKCE)
-        if hasattr(flow, "code_verifier"):
-            st.session_state["code_verifier"] = flow.code_verifier
 
         st.markdown(f"""
             <style>
