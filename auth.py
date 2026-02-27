@@ -1,7 +1,8 @@
 import streamlit as st
 import google_auth_oauthlib.flow
-from googleapiclient.discovery import build
 import os
+import requests
+from google.oauth2.credentials import Credentials
 import hashlib
 import base64
 
@@ -81,10 +82,30 @@ def authenticate_user():
         try:
             code = st.query_params["code"]
             
-            # Ingen PKCE kreves siden vår "web" client-type (med secret) i Google Cloud
-            # uansett er sikker når den kjører server-side.
-            flow.fetch_token(code=code)
-            credentials = flow.credentials
+            # Gjenopprett token manuelt for å omgå google-auth-oauthlib sine strenge (og feilende) PKCE-krav
+            # Siden vi er en Web App med client_secret, er dette 100% sikkert.
+            token_url = client_config["web"]["token_uri"]
+            payload = {
+                "client_id": client_config["web"]["client_id"],
+                "client_secret": client_config["web"]["client_secret"],
+                "code": code,
+                "grant_type": "authorization_code",
+                "redirect_uri": redirect_uri
+            }
+            
+            response = requests.post(token_url, data=payload)
+            response.raise_for_status()
+            token_data = response.json()
+            
+            # Opprett credentials objekt
+            credentials = Credentials(
+                token=token_data["access_token"],
+                refresh_token=token_data.get("refresh_token"),
+                token_uri=token_url,
+                client_id=client_config["web"]["client_id"],
+                client_secret=client_config["web"]["client_secret"],
+                scopes=SCOPES
+            )
 
             # VERIFISERING: Hent info om hvem dette er
             # Vi bruker 'people' API da dette er mer robust enn oauth2 v2
