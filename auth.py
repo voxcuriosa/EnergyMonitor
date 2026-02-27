@@ -43,8 +43,8 @@ def authenticate_user():
     """, unsafe_allow_html=True)
 
     # BRUTE FORCE PROTECTION
-    MAX_ATTEMPTS = 5
-    LOCKOUT_TIME_SECONDS = 300 # 5 minutter
+    MAX_ATTEMPTS = 3
+    LOCKOUT_TIME_SECONDS = 3600 # 1 time
 
     if "login_attempts" not in st.session_state:
         st.session_state["login_attempts"] = 0
@@ -83,7 +83,7 @@ def authenticate_user():
                     
                     if attempts_left <= 0:
                         st.session_state["lockout_time"] = time.time() + LOCKOUT_TIME_SECONDS
-                        st.error("For mange feilforsøk. Du er låst ute i 5 minutter.")
+                        st.error("For mange feilforsøk. Du er låst ute i 1 time.")
                         time.sleep(1) # Liten forsinkelse for å straffe bots
                         st.rerun()
                     else:
