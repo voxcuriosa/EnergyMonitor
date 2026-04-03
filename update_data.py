@@ -19,6 +19,12 @@ def main():
     print("Connecting to Homey API...")
     try:
         client = HomeyClient()
+        
+        # DEBUG: Print lengths of ID and Key (safe way to check secrets exist)
+        h_id_len = len(client.homey_id) if client.homey_id else 0
+        h_key_len = len(client.api_key) if client.api_key else 0
+        print(f"DEBUG: Homey ID length: {h_id_len}, API Key length: {h_key_len}")
+        
         data = client.get_energy_data()
         
         if not data:
