@@ -249,8 +249,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         thead.innerHTML = '<th class="table-cell">Periode</th>';
         tfoot.innerHTML = '<th class="table-cell text-left">Periode</th>';
         
-        // Reorder: Totalt first
-        let cols = ["Totalt", ...visibleDevices.filter(d => d !== "Totalt")];
+        // Sorter kolonner etter totalt forbruk (høyest først)
+        // Vi bruker den nyeste SUM-raden for å bestemme rekkefølgen
+        const latestSumRow = tableRows.filter(r => r.isSum).pop() || {};
+        
+        let sortedDevices = [...visibleDevices.filter(d => d !== "Totalt")].sort((a, b) => {
+            const valA = parseFloat(latestSumRow[a]) || 0;
+            const valB = parseFloat(latestSumRow[b]) || 0;
+            return valB - valA;
+        });
+
+        let cols = ["Totalt", ...sortedDevices];
 
         cols.forEach(dev => {
             const hTh = document.createElement('th');
