@@ -159,6 +159,12 @@ if not readings_df.empty:
             10: {"Totalt": 1921, "Easee": 454}, 
             11: {"Totalt": 2172, "Easee": 456}, 
             12: {"Totalt": 2561, "Easee": 514}
+        },
+        2026: {
+            3: {
+                "Varmepumpe": 500, # Fikser Mars 2026 fordi varmepumpen frøs
+                "Fryser": 10.52    # Fra 1052.0 delt på 100 grunnet kommafeil i måler
+            }
         }
     }
 
