@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ Strømforbruk (Webhotell versjon)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkblue: '#111827',
+                        lightbg: '#f3f4f6'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        body {
+            background-color: #f9fafb;
+            color: #111827;
+        }
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #111827;
+                color: #f9fafb;
+            }
+            .card {
+                background-color: #1f2937;
+                border-color: #374151;
+            }
+            .table-head {
+                background-color: #374151;
+                color: #e5e7eb;
+            }
+            .table-row {
+                border-bottom-color: #374151;
+            }
+            .table-sum {
+                background-color: #262730;
+                color: #ffffff;
+                font-weight: bold;
+                border-top: 2px solid #4e4e4e;
+            }
+        }
+        @media (prefers-color-scheme: light) {
+            .card {
+                background-color: #ffffff;
+                border: 1px solid #e5e7eb;
+                box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            }
+            .table-head {
+                background-color: #f3f4f6;
+                color: #374151;
+            }
+            .table-row {
+                border-bottom: 1px solid #e5e7eb;
+            }
+            .table-sum {
+                background-color: #f9fafb;
+                color: #111827;
+                font-weight: bold;
+                border-top: 2px solid #d1d5db;
+            }
+        }
+        .table-cell {
+            padding: 0.75rem 1rem;
+            white-space: nowrap;
+        }
+        
+        /* Glassmorphism utility */
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 font-sans antialiased">
+    <div class="max-w-7xl mx-auto">
+        <header class="mb-8">
+            <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight mb-2">⚡ Strømforbruk</h1>
+            <p class="text-gray-500 dark:text-gray-400">Rask versjon optimalisert for eget webhotell</p>
+        </header>
+
+        <div id="loading" class="flex justify-center items-center py-20">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        </div>
+
+        <div id="app-content" class="hidden space-y-8">
+            
+            <!-- Controls -->
+            <div class="card p-6 rounded-xl">
+                <h2 class="text-lg font-semibold mb-4">Filtrering</h2>
+                <div class="flex flex-wrap gap-4" id="device-filters">
+                    <!-- Checkboxes injiseres her via JS -->
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="card rounded-xl overflow-hidden overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="table-head">
+                        <tr id="table-header-row">
+                            <!-- Kolonner injiseres her -->
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Rader injiseres her -->
+                    </tbody>
+                    <tfoot class="table-head" id="table-footer-row">
+                         <!-- Footer (gjentatt header) -->
+                    </tfoot>
+                </table>
+            </div>
+
+            <!-- Chart -->
+            <div class="card p-6 rounded-xl">
+                <h2 class="text-xl font-bold mb-4">📊 Sammenligning av år</h2>
+                <div class="w-full h-[500px]">
+                    <canvas id="energyChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Logic -->
+    <script src="app.js"></script>
+</body>
+</html>
